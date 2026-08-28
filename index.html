@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartClass Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="layout">
+
+    <aside class="sidebar">
+      <div class="logo">
+        <div class="logo-box">⚡</div>
+        <div>
+          <h1>SmartClass</h1>
+          <span>Admin Portal</span>
+        </div>
+      </div>
+
+      <nav>
+        <button class="nav-btn active" data-view="dashboard">▦ Dashboard</button>
+        <button class="nav-btn" data-view="monitoring">◉ Live Monitoring</button>
+        <button class="nav-btn" data-view="optimization">↗ Energy Optimization</button>
+        <button class="nav-btn" data-view="rooms">▣ Room Controls</button>
+        <button class="nav-btn" data-view="reports">▤ Savings Report</button>
+        <button class="nav-btn" data-view="sensors">⌁ Sensor Status</button>
+      </nav>
+
+      <div class="admin-box">
+        <div class="avatar">A</div>
+        <div>
+          <strong>College Admin</strong>
+          <small>Administrator</small>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <small class="label">ADMINISTRATION</small>
+          <h2 id="pageTitle">Smart Classroom Overview</h2>
+        </div>
+
+        <div class="top-actions">
+          <span class="online">
+            <i></i> Sensors online
+          </span>
+
+          <button class="secondary-btn" id="refreshBtn">↻ Refresh</button>
+
+          <button class="save-btn" id="optimizeSaveBtn">
+            ⚡ Optimize & Save
+          </button>
+        </div>
+      </header>
+
+      <div class="content">
+
+        <section class="view active" id="view-dashboard">
+          <div class="intro">
+            <div>
+              <h3>Smart Classroom Overview</h3>
+              <p>Monitor classrooms and optimize energy automatically.</p>
+            </div>
+            <span id="lastUpdated">Last updated: --</span>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat blue">
+              <span>Electricity Used</span>
+              <strong id="usedKwh">0.00 kWh</strong>
+              <small>Estimated today</small>
+            </div>
+
+            <div class="stat green">
+              <span>Energy Optimized</span>
+              <strong id="savedKwh">0.00 kWh</strong>
+              <small id="optimizationPercent">0% better than baseline</small>
+            </div>
+
+            <div class="stat purple">
+              <span>Estimated Cost Saved</span>
+              <strong id="moneySaved">₹0.00</strong>
+              <small>Current tariff based</small>
+            </div>
+
+            <div class="stat orange">
+              <span>Equivalent Homes</span>
+              <strong id="homesPowered">0.00</strong>
+              <small>Home-month equivalent</small>
+            </div>
+          </div>
+
+          <div class="section-title">
+            <div>
+              <h3>Classroom Overview</h3>
+              <p>Automatic occupancy and AC status</p>
+            </div>
+            <button class="secondary-btn" data-view-link="monitoring">
+              View live data
+            </button>
+          </div>
+
+          <div class="room-grid" id="roomGrid"></div>
+
+          <div class="panel">
+            <div class="section-title">
+              <div>
+                <h3>Smart Recommendation</h3>
+                <p>Automatic optimization insight</p>
+              </div>
+              <span class="success-badge">Optimizing</span>
+            </div>
+
+            <div class="recommendation" id="recommendation">
+              Smart optimization is active.
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="view-monitoring">
+          <div class="section-title page-heading">
+            <div>
+              <h3>Live Sensor Monitoring</h3>
+              <p>Thermal and movement sensor readings.</p>
+            </div>
+            <span class="live">● LIVE</span>
+          </div>
+
+          <div class="monitor-grid" id="monitorGrid"></div>
+        </section>
+
+        <section class="view" id="view-optimization">
+          <div class="section-title page-heading">
+            <div>
+              <h3>Energy Optimization</h3>
+              <p>Reduce unnecessary cooling and improve energy usage.</p>
+            </div>
+            <span class="success-badge">Optimization active</span>
+          </div>
+
+          <div class="optimization-box">
+            <span>Total energy optimized</span>
+            <strong id="bigSavedKwh">0.00 kWh</strong>
+            <small id="bigPercent">0% better than baseline</small>
+          </div>
+
+          <div class="panel">
+            <h3>Room-wise Optimization</h3>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Room</th>
+                    <th>Occupancy</th>
+                    <th>Used</th>
+                    <th>Baseline</th>
+                    <th>Saved</th>
+                    <th>Optimization</th>
+                  </tr>
+                </thead>
+                <tbody id="optimizationTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="view-rooms">
+          <div class="section-title page-heading">
+            <div>
+              <h3>Room Controls</h3>
+              <p>Automatic mode is recommended.</p>
+            </div>
+            <button class="save-btn" id="allAutoBtn">
+              Enable all automatic
+            </button>
+          </div>
+
+          <div class="control-grid" id="controlGrid"></div>
+        </section>
+
+        <section class="view" id="view-reports">
+          <div class="section-title page-heading">
+            <div>
+              <h3>Savings Report</h3>
+              <p>Saved records from current dashboard session.</p>
+            </div>
+            <button class="secondary-btn" id="exportBtn">Export CSV</button>
+          </div>
+
+          <div class="report-grid">
+            <div class="stat blue">
+              <span>Electricity Used</span>
+              <strong id="reportUsed">0.00 kWh</strong>
+            </div>
+
+            <div class="stat green">
+              <span>Energy Optimized</span>
+              <strong id="reportSaved">0.00 kWh</strong>
+            </div>
+
+            <div class="stat purple">
+              <span>Optimization</span>
+              <strong id="reportPercent">0%</strong>
+            </div>
+
+            <div class="stat orange">
+              <span>Equivalent Homes</span>
+              <strong id="reportHomes">0.00</strong>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3>Recent Actions</h3>
+            <div id="activityList"></div>
+          </div>
+        </section>
+
+        <section class="view" id="view-sensors">
+          <div class="section-title page-heading">
+            <div>
+              <h3>Sensor Status</h3>
+              <p>Thermal and movement sensor connection status.</p>
+            </div>
+            <button class="secondary-btn" id="sensorRefreshBtn">
+              Refresh sensors
+            </button>
+          </div>
+
+          <div class="sensor-summary">
+            <div class="panel">
+              <span>Online Sensors</span>
+              <strong id="onlineSensors">0</strong>
+            </div>
+
+            <div class="panel">
+              <span>Total Sensors</span>
+              <strong id="totalSensors">0</strong>
+            </div>
+          </div>
+
+          <div class="sensor-grid" id="sensorGrid"></div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script.js"></script>
+</body>
+</html>
