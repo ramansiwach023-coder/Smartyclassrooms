@@ -1278,3 +1278,324 @@ table tbody tr:hover {
     transition-duration: 0.01ms !important;
   }
 }
+/* =====================================================
+   STRONG VISIBLE ANIMATIONS
+   ===================================================== */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-size: 300% 300%;
+  animation: animatedBackground 14s ease infinite;
+}
+
+@keyframes animatedBackground {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Main content floating light effect */
+.main {
+  position: relative;
+  overflow: hidden;
+}
+
+.main::before {
+  content: "";
+  position: absolute;
+  top: 8%;
+  right: 8%;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(6, 182, 212, 0.20),
+    transparent 68%
+  );
+  filter: blur(8px);
+  pointer-events: none;
+  animation: floatingLight 7s ease-in-out infinite alternate;
+}
+
+@keyframes floatingLight {
+  0% {
+    transform: translate(0, 0) scale(0.85);
+    opacity: 0.45;
+  }
+  100% {
+    transform: translate(-120px, 160px) scale(1.35);
+    opacity: 0.9;
+  }
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+}
+
+/* Dashboard entry animation */
+.view.active .stat,
+.view.active .room-card,
+.view.active .panel,
+.view.active .monitor-card,
+.view.active .control-card,
+.view.active .sensor-card {
+  animation: smoothEntry 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes smoothEntry {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.92);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-5px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Different delays for cards */
+.view.active .stat:nth-child(1),
+.view.active .room-card:nth-child(1),
+.view.active .monitor-card:nth-child(1),
+.view.active .control-card:nth-child(1),
+.view.active .sensor-card:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.view.active .stat:nth-child(2),
+.view.active .room-card:nth-child(2),
+.view.active .monitor-card:nth-child(2),
+.view.active .control-card:nth-child(2),
+.view.active .sensor-card:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.view.active .stat:nth-child(3),
+.view.active .room-card:nth-child(3),
+.view.active .monitor-card:nth-child(3),
+.view.active .control-card:nth-child(3),
+.view.active .sensor-card:nth-child(3) {
+  animation-delay: 0.25s;
+}
+
+.view.active .stat:nth-child(4),
+.view.active .room-card:nth-child(4),
+.view.active .monitor-card:nth-child(4),
+.view.active .control-card:nth-child(4),
+.view.active .sensor-card:nth-child(4) {
+  animation-delay: 0.35s;
+}
+
+/* Continuous soft floating effect */
+.room-card,
+.monitor-card,
+.control-card {
+  animation-name: softFloat;
+  animation-duration: 5s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+.room-card:nth-child(2),
+.monitor-card:nth-child(2),
+.control-card:nth-child(2) {
+  animation-delay: 0.8s;
+}
+
+.room-card:nth-child(3),
+.monitor-card:nth-child(3),
+.control-card:nth-child(3) {
+  animation-delay: 1.6s;
+}
+
+.room-card:nth-child(4),
+.monitor-card:nth-child(4),
+.control-card:nth-child(4) {
+  animation-delay: 2.4s;
+}
+
+@keyframes softFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+/* Strong hover effect */
+.stat:hover,
+.room-card:hover,
+.monitor-card:hover,
+.control-card:hover,
+.sensor-card:hover,
+.panel:hover {
+  transform: translateY(-12px) scale(1.025);
+  border-color: #38bdf8;
+  box-shadow:
+    0 20px 45px rgba(37, 99, 235, 0.20),
+    0 0 22px rgba(6, 182, 212, 0.16);
+}
+
+/* Animated border glow */
+.room-card::before,
+.monitor-card::before,
+.control-card::before,
+.sensor-card::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(37, 99, 235, 0.55),
+    rgba(6, 182, 212, 0.55),
+    transparent
+  );
+  background-size: 250% 250%;
+  opacity: 0;
+  animation: borderGlow 4s linear infinite;
+  transition: opacity 0.3s ease;
+}
+
+.room-card:hover::before,
+.monitor-card:hover::before,
+.control-card:hover::before,
+.sensor-card:hover::before {
+  opacity: 1;
+}
+
+@keyframes borderGlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 250% 50%;
+  }
+}
+
+/* Optimize & Save button */
+#optimizeSaveBtn,
+.save-btn {
+  animation: saveButtonPulse 2.2s ease-in-out infinite;
+}
+
+@keyframes saveButtonPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 8px 20px rgba(37, 99, 235, 0.25),
+      0 0 0 0 rgba(6, 182, 212, 0.35);
+  }
+  50% {
+    box-shadow:
+      0 12px 30px rgba(37, 99, 235, 0.45),
+      0 0 0 9px rgba(6, 182, 212, 0);
+  }
+}
+
+#optimizeSaveBtn:hover,
+.save-btn:hover {
+  animation: none;
+  transform: translateY(-5px) scale(1.06);
+}
+
+/* Animated live status */
+.live,
+.online,
+.status.on {
+  animation: activeStatus 1.3s ease-in-out infinite alternate;
+}
+
+@keyframes activeStatus {
+  from {
+    filter: brightness(0.9);
+    opacity: 0.7;
+  }
+  to {
+    filter: brightness(1.25);
+    opacity: 1;
+  }
+}
+
+/* Animated temperature */
+.temperature {
+  animation: temperatureGlow 3s ease-in-out infinite alternate;
+}
+
+@keyframes temperatureGlow {
+  from {
+    text-shadow: 0 0 0 rgba(37, 99, 235, 0);
+  }
+  to {
+    color: #2563eb;
+    text-shadow: 0 0 14px rgba(37, 99, 235, 0.28);
+  }
+}
+
+/* Animated saved energy number */
+#savedKwh,
+#moneySaved,
+#homesPowered,
+#bigSavedKwh {
+  animation: savedNumberGlow 2.5s ease-in-out infinite alternate;
+}
+
+@keyframes savedNumberGlow {
+  from {
+    color: inherit;
+    text-shadow: 0 0 0 rgba(22, 163, 74, 0);
+  }
+  to {
+    color: #16a34a;
+    text-shadow: 0 0 17px rgba(22, 163, 74, 0.35);
+  }
+}
+
+/* Sidebar active button */
+.nav-btn.active {
+  animation: activeNav 2.5s ease-in-out infinite alternate;
+}
+
+@keyframes activeNav {
+  from {
+    box-shadow: inset 3px 0 0 #38bdf8;
+  }
+  to {
+    box-shadow:
+      inset 5px 0 0 #67e8f9,
+      0 0 18px rgba(37, 99, 235, 0.18);
+  }
+}
+
+/* Recommendation highlight */
+.recommendation {
+  animation: recommendationGlow 3s ease-in-out infinite alternate;
+}
+
+@keyframes recommendationGlow {
+  from {
+    box-shadow: 0 0 0 rgba(132, 204, 22, 0);
+  }
+  to {
+    box-shadow: 0 0 24px rgba(132, 204, 22, 0.25);
+  }
+}
