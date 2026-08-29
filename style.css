@@ -1938,3 +1938,188 @@ small,
     transform: scale(1.04);
   }
 }
+
+#activityList {
+  display: grid;
+  gap: 11px;
+  margin-top: 18px;
+}
+
+#activityList .activity {
+  position: relative;
+  overflow: hidden;
+  padding: 15px 17px 15px 43px;
+  color: #ecfdf5;
+  border: 1px solid rgba(52, 211, 153, 0.24);
+  border-radius: 11px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(6, 78, 59, 0.72),
+      rgba(15, 23, 42, 0.88)
+    );
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition:
+    transform 0.4s ease,
+    border-color 0.4s ease,
+    box-shadow 0.4s ease,
+    background 0.4s ease;
+}
+
+#activityList .activity::before {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  width: 21px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #052e1b;
+  background: #6ee7b7;
+  font-size: 12px;
+  font-weight: bold;
+  transform: translateY(-50%);
+  box-shadow: 0 0 14px rgba(110, 231, 183, 0.55);
+}
+
+#activityList .activity:hover {
+  transform: translateX(7px) translateY(-3px);
+  border-color: #6ee7b7;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(6, 95, 70, 0.88),
+      rgba(30, 41, 59, 0.95)
+    );
+  box-shadow:
+    0 13px 28px rgba(0, 0, 0, 0.32),
+    0 0 20px rgba(52, 211, 153, 0.16);
+}
+
+#activityList .activity small {
+  display: block;
+  margin-top: 6px;
+  color: #a7f3d0;
+  font-size: 10px;
+}
+
+/* Bright dashboard values */
+.stat strong,
+#usedKwh,
+#savedKwh,
+#moneySaved,
+#homesPowered,
+#bigSavedKwh,
+#reportUsed,
+#reportSaved,
+#reportPercent,
+#reportHomes {
+  color: #f8fafc;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  text-shadow:
+    0 0 12px rgba(255, 255, 255, 0.18),
+    0 2px 5px rgba(0, 0, 0, 0.35);
+}
+
+/* Different highlight colors for important values */
+#savedKwh,
+#moneySaved,
+#reportSaved,
+#bigSavedKwh {
+  color: #6ee7b7;
+  text-shadow:
+    0 0 15px rgba(110, 231, 183, 0.48),
+    0 2px 5px rgba(0, 0, 0, 0.35);
+}
+
+#homesPowered,
+#reportHomes {
+  color: #fcd34d;
+  text-shadow:
+    0 0 15px rgba(252, 211, 77, 0.42),
+    0 2px 5px rgba(0, 0, 0, 0.35);
+}
+
+#usedKwh,
+#reportUsed {
+  color: #93c5fd;
+  text-shadow:
+    0 0 15px rgba(147, 197, 253, 0.40),
+    0 2px 5px rgba(0, 0, 0, 0.35);
+}
+
+/* Bright room data */
+.data-row strong,
+.metric strong,
+.sensor-data strong,
+.room-card .temperature {
+  color: #f8fafc;
+  font-weight: 800;
+  text-shadow:
+    0 0 10px rgba(255, 255, 255, 0.18),
+    0 2px 4px rgba(0, 0, 0, 0.35);
+}
+
+.data-row strong,
+.metric strong,
+.sensor-data strong {
+  color: #d1fae5;
+}
+
+.room-card .temperature {
+  color: #fdba74;
+  font-size: 30px;
+  text-shadow:
+    0 0 16px rgba(251, 146, 60, 0.45),
+    0 2px 5px rgba(0, 0, 0, 0.35);
+}
+
+/* Bright optimization table numbers */
+#optimizationTable td {
+  color: #e5e7eb;
+}
+
+#optimizationTable td:not(:first-child) {
+  color: #f8fafc;
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
+}
+
+#optimizationTable td.saved {
+  color: #6ee7b7;
+  font-weight: 800;
+  text-shadow: 0 0 12px rgba(110, 231, 183, 0.42);
+}
+
+#optimizationTable td small {
+  color: #a7f3d0;
+}
+
+/* Bright occupancy and sensor readings */
+.monitor-card .metric strong,
+.control-card .data-row strong,
+.sensor-card .sensor-data strong {
+  color: #f0fdf4;
+}
+
+/* Light glowing section headings */
+.panel h3,
+.section-title h3,
+.intro h3 {
+  color: #f8fafc;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.10);
+}
+
+/* Better muted text contrast */
+.panel p,
+.section-title p,
+.room-card small,
+.monitor-card small,
+.intro > span {
+  color: #aebdb5;
+}
