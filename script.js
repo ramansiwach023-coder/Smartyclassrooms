@@ -29,7 +29,7 @@ const state = {
     },
     {
       id: "AC2",
-      name: "Classroom 2",
+      name: "Classroom 1",
       capacity: 45,
       occupancy: 0,
       temperature: 27.1,
@@ -40,7 +40,7 @@ const state = {
     },
     {
       id: "AC3",
-      name: "Classroom 3",
+      name: "Classroom 1",
       capacity: 60,
       occupancy: 31,
       temperature: 29.2,
@@ -51,7 +51,7 @@ const state = {
     },
     {
       id: "AC4",
-      name: "Classroom 4",
+      name: "Classroom 1",
       capacity: 50,
       occupancy: 14,
       temperature: 28.8,
