@@ -1,10 +1,17 @@
 const SUPABASE_URL = "https://xkjauqpdmfiugkhqnadc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_G-eKruij0iFteXsF6pLEtQ_Txm2anY2";
 
-const supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY
-);
+const supabaseConfigured =
+  SUPABASE_URL.startsWith("https://") &&
+  !SUPABASE_URL.includes("PASTE_") &&
+  !SUPABASE_ANON_KEY.includes("PASTE_");
+
+const supabaseClient = supabaseConfigured
+  ? window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY
+    )
+  : null;
 
 const CONFIG = {
   acPowerKw: 1.5,
@@ -15,6 +22,9 @@ const CONFIG = {
 };
 
 const state = {
+  classroomOccupancy: 18,
+  classroomTemperature: 28.4,
+
   rooms: [
     {
       id: "AC1",
@@ -31,37 +41,40 @@ const state = {
       id: "AC2",
       name: "Classroom 1",
       capacity: 45,
-      occupancy: 0,
-      temperature: 27.1,
-      motion: false,
-      status: "OFF",
+      occupancy: 18,
+      temperature: 28.4,
+      motion: true,
+      status: "ON",
       mode: "automatic",
-      actualKwh: 2.1
+      actualKwh: 6.2
     },
     {
       id: "AC3",
       name: "Classroom 1",
-      capacity: 60,
-      occupancy: 31,
-      temperature: 29.2,
+      capacity: 45,
+      occupancy: 18,
+      temperature: 28.4,
       motion: true,
       status: "ON",
       mode: "automatic",
-      actualKwh: 8.3
+      actualKwh: 6.2
     },
     {
       id: "AC4",
       name: "Classroom 1",
-      capacity: 50,
-      occupancy: 14,
-      temperature: 28.8,
+      capacity: 45,
+      occupancy: 18,
+      temperature: 28.4,
       motion: true,
       status: "ON",
       mode: "automatic",
-      actualKwh: 7.1
+      actualKwh: 6.2
     }
   ],
-  activities: []
+
+  activities: [],
+
+  recommendationIndex: 0
 };
 
 const pageTitles = {
@@ -73,24 +86,69 @@ const pageTitles = {
   sensors: "Sensor Status"
 };
 
+const recommendationMessages = [
+  {
+    title: "Smart cooling is active",
+    text: "The system is adjusting AC operation according to live occupancy and temperature data."
+  },
+  {
+    title: "Energy usage is being optimized",
+    text: "Cooling is reduced automatically when the classroom is empty or does not require full cooling."
+  },
+  {
+    title: "Efficient classroom management",
+    text: "The current AC plan balances student comfort with lower electricity consumption."
+  },
+  {
+    title: "Unnecessary cooling reduced",
+    text: "The system is avoiding unnecessary AC operation while keeping the occupied classroom comfortable."
+  },
+  {
+    title: "Automatic optimization running",
+    text: "Classroom conditions are being monitored continuously to select the most efficient cooling mode."
+  },
+  {
+    title: "Energy-saving recommendation",
+    text: "Keep automatic mode enabled so the system can respond to changing occupancy levels."
+  },
+  {
+    title: "Cooling performance is stable",
+    text: "Current classroom temperature and occupancy readings are within the optimization range."
+  }
+];
+
 function format(value, decimals = 2) {
   return Number(value).toFixed(decimals);
 }
 
-function getBaseline() {
+function clamp(value, minimum, maximum) {
+  return Math.min(Math.max(value, minimum), maximum);
+}
+
+function getBaselineForOneAC() {
   return CONFIG.acPowerKw * CONFIG.baselineHoursPerDay;
 }
 
 function getMetrics() {
-  const baseline = getBaseline() * state.rooms.length;
-  const actual = state.rooms.reduce((sum, room) => {
-    return sum + room.actualKwh;
-  }, 0);
+  const baseline =
+    getBaselineForOneAC() * state.rooms.length;
+
+  const actual =
+    state.rooms.reduce((total, room) => {
+      return total + room.actualKwh;
+    }, 0);
 
   const saved = Math.max(0, baseline - actual);
-  const percentage = baseline ? (saved / baseline) * 100 : 0;
-  const moneySaved = saved * CONFIG.electricityTariff;
-  const homes = saved / CONFIG.referenceHomeMonthlyKwh;
+
+  const percentage = baseline > 0
+    ? (saved / baseline) * 100
+    : 0;
+
+  const moneySaved =
+    saved * CONFIG.electricityTariff;
+
+  const equivalentHomes =
+    saved / CONFIG.referenceHomeMonthlyKwh;
 
   return {
     baseline,
@@ -98,25 +156,31 @@ function getMetrics() {
     saved,
     percentage,
     moneySaved,
-    homes
+    equivalentHomes
   };
 }
 
 function updateRoomStatus(room) {
   if (room.mode === "manual-on") {
     room.status = "ON";
-  } else if (room.mode === "manual-off") {
-    room.status = "OFF";
-  } else {
-    room.mode = "automatic";
-    room.status =
-      room.occupancy > 0 && room.temperature >= 24
-        ? "ON"
-        : "OFF";
+    return;
   }
+
+  if (room.mode === "manual-off") {
+    room.status = "OFF";
+    return;
+  }
+
+  room.mode = "automatic";
+
+  room.status =
+    room.occupancy > 0 &&
+    room.temperature >= 24
+      ? "ON"
+      : "OFF";
 }
 
-function statusHtml(status) {
+function statusHTML(status) {
   return `
     <span class="status ${status === "ON" ? "on" : "off"}">
       ${status}
@@ -124,32 +188,85 @@ function statusHtml(status) {
   `;
 }
 
+function addActivity(text) {
+  state.activities.unshift({
+    text,
+    time: new Date().toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      dateStyle: "medium",
+      timeStyle: "short"
+    })
+  });
+
+  state.activities =
+    state.activities.slice(0, 10);
+}
+
 function simulateSensorData() {
+  const occupancyChange =
+    Math.floor(Math.random() * 7) - 3;
+
+  state.classroomOccupancy = clamp(
+    state.classroomOccupancy + occupancyChange,
+    0,
+    45
+  );
+
+  const temperatureChange =
+    Math.random() * 0.5 - 0.25;
+
+  state.classroomTemperature = clamp(
+    state.classroomTemperature + temperatureChange,
+    22,
+    35
+  );
+
+  const motionDetected =
+    state.classroomOccupancy > 0 &&
+    Math.random() > 0.12;
+
   state.rooms.forEach(room => {
-    if (room.mode === "automatic") {
-      const change = Math.floor(Math.random() * 7) - 3;
-      room.occupancy = Math.max(
-        0,
-        Math.min(room.capacity, room.occupancy + change)
-      );
-    }
+    room.occupancy =
+      state.classroomOccupancy;
 
-    room.temperature += Math.random() * 0.5 - 0.25;
-    room.temperature = Math.max(
-      22,
-      Math.min(35, room.temperature)
-    );
+    room.temperature =
+      state.classroomTemperature;
 
-    room.motion = room.occupancy > 0 && Math.random() > 0.15;
+    room.motion =
+      motionDetected;
 
     updateRoomStatus(room);
 
     if (room.status === "ON") {
-      room.actualKwh += CONFIG.acPowerKw * 10 / 3600;
+      room.actualKwh +=
+        CONFIG.acPowerKw * CONFIG.refreshMs / 3600000;
     } else {
-      room.actualKwh += 0.01 * 10 / 3600;
+      room.actualKwh +=
+        0.01 * CONFIG.refreshMs / 3600000;
     }
   });
+}
+
+function renderRecommendation() {
+  const recommendation =
+    recommendationMessages[
+      state.recommendationIndex %
+      recommendationMessages.length
+    ];
+
+  state.recommendationIndex++;
+
+  const element =
+    document.getElementById("recommendation");
+
+  if (!element) {
+    return;
+  }
+
+  element.innerHTML = `
+    <strong>${recommendation.title}</strong>
+    <span>${recommendation.text}</span>
+  `;
 }
 
 function renderDashboard() {
@@ -165,13 +282,17 @@ function renderDashboard() {
     `₹${format(metrics.moneySaved)}`;
 
   document.getElementById("homesPowered").textContent =
-    format(metrics.homes);
+    format(metrics.equivalentHomes);
 
   document.getElementById("optimizationPercent").textContent =
     `${format(metrics.percentage, 1)}% better than baseline`;
 
   document.getElementById("lastUpdated").textContent =
-    `Last updated: ${new Date().toLocaleTimeString()}`;
+    `Last updated: ${new Date().toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      dateStyle: "medium",
+      timeStyle: "medium"
+    })}`;
 
   document.getElementById("roomGrid").innerHTML =
     state.rooms.map(room => `
@@ -181,7 +302,8 @@ function renderDashboard() {
             <h4>${room.id}</h4>
             <small>${room.name}</small>
           </div>
-          ${statusHtml(room.status)}
+
+          ${statusHTML(room.status)}
         </div>
 
         <div class="temperature">
@@ -200,14 +322,7 @@ function renderDashboard() {
       </article>
     `).join("");
 
-  const emptyRooms = state.rooms.filter(
-    room => room.occupancy === 0
-  ).length;
-
-  document.getElementById("recommendation").textContent =
-    emptyRooms > 0
-      ? `${emptyRooms} classroom empty hai. Unnecessary cooling automatically reduce ki ja rahi hai.`
-      : "All classrooms occupied hain. Cooling occupancy aur temperature ke according optimize ho rahi hai.";
+  renderRecommendation();
 }
 
 function renderMonitoring() {
@@ -219,7 +334,8 @@ function renderMonitoring() {
             <h4>${room.id} · ${room.name}</h4>
             <small>● Live sensor data</small>
           </div>
-          ${statusHtml(room.status)}
+
+          ${statusHTML(room.status)}
         </div>
 
         <div class="metrics">
@@ -235,11 +351,12 @@ function renderMonitoring() {
 
           <div class="metric">
             <span>Movement</span>
-            <strong>${room.motion ? "Yes" : "No"}</strong>
+            <strong>${room.motion ? "Detected" : "None"}</strong>
           </div>
         </div>
 
-        <small>Thermal sensor: Online</small><br>
+        <small>Thermal sensor: Online</small>
+        <br>
         <small>Movement sensor: Online</small>
       </article>
     `).join("");
@@ -256,18 +373,38 @@ function renderOptimization() {
 
   document.getElementById("optimizationTable").innerHTML =
     state.rooms.map(room => {
-      const baseline = getBaseline();
-      const saved = Math.max(0, baseline - room.actualKwh);
-      const percentage = (saved / baseline) * 100;
+      const baseline =
+        getBaselineForOneAC();
+
+      const saved =
+        Math.max(0, baseline - room.actualKwh);
+
+      const percentage =
+        baseline > 0
+          ? (saved / baseline) * 100
+          : 0;
 
       return `
         <tr>
-          <td><strong>${room.id}</strong></td>
+          <td>
+            <strong>${room.id}</strong>
+            <br>
+            <small>${room.name}</small>
+          </td>
+
           <td>${room.occupancy}</td>
+
           <td>${format(room.actualKwh)} kWh</td>
+
           <td>${format(baseline)} kWh</td>
-          <td class="saved">${format(saved)} kWh</td>
-          <td class="saved">${format(percentage, 1)}%</td>
+
+          <td class="saved">
+            ${format(saved)} kWh
+          </td>
+
+          <td class="saved">
+            ${format(percentage, 1)}%
+          </td>
         </tr>
       `;
     }).join("");
@@ -282,25 +419,41 @@ function renderControls() {
             <h4>${room.id} · ${room.name}</h4>
             <small>Occupancy: ${room.occupancy}</small>
           </div>
-          ${statusHtml(room.status)}
+
+          ${statusHTML(room.status)}
         </div>
 
         <div class="control-buttons">
-          <button class="control-btn ${
-            room.mode === "automatic" ? "selected" : ""
-          }" data-room="${room.id}" data-mode="automatic">
+          <button
+            class="control-btn ${
+              room.mode === "automatic"
+                ? "selected"
+                : ""
+            }"
+            data-room="${room.id}"
+            data-mode="automatic">
             Automatic
           </button>
 
-          <button class="control-btn ${
-            room.mode === "manual-on" ? "selected" : ""
-          }" data-room="${room.id}" data-mode="manual-on">
+          <button
+            class="control-btn ${
+              room.mode === "manual-on"
+                ? "selected"
+                : ""
+            }"
+            data-room="${room.id}"
+            data-mode="manual-on">
             Turn ON
           </button>
 
-          <button class="control-btn ${
-            room.mode === "manual-off" ? "selected" : ""
-          }" data-room="${room.id}" data-mode="manual-off">
+          <button
+            class="control-btn ${
+              room.mode === "manual-off"
+                ? "selected"
+                : ""
+            }"
+            data-room="${room.id}"
+            data-mode="manual-off">
             Turn OFF
           </button>
         </div>
@@ -326,24 +479,39 @@ function renderReports() {
     `${format(metrics.percentage, 1)}%`;
 
   document.getElementById("reportHomes").textContent =
-    format(metrics.homes);
+    format(metrics.equivalentHomes);
 
-  document.getElementById("activityList").innerHTML =
-    state.activities.length
-      ? state.activities.slice(0, 8).map(item => `
-          <div class="activity">
-            ✓ ${item.text}
-            <small>${item.time}</small>
-          </div>
-        `).join("")
-      : `<div class="activity">No saved actions yet.</div>`;
+  const activityList =
+    document.getElementById("activityList");
+
+  if (!state.activities.length) {
+    activityList.innerHTML = `
+      <div class="activity">
+        No optimization actions saved yet.
+      </div>
+    `;
+
+    return;
+  }
+
+  activityList.innerHTML =
+    state.activities.map(item => `
+      <div class="activity">
+        ${item.text}
+        <small>${item.time}</small>
+      </div>
+    `).join("");
 }
 
 function renderSensors() {
-  const total = state.rooms.length * 2;
+  const totalSensors =
+    state.rooms.length * 2;
 
-  document.getElementById("totalSensors").textContent = total;
-  document.getElementById("onlineSensors").textContent = total;
+  document.getElementById("totalSensors").textContent =
+    totalSensors;
+
+  document.getElementById("onlineSensors").textContent =
+    totalSensors;
 
   document.getElementById("sensorGrid").innerHTML =
     state.rooms.map(room => `
@@ -368,7 +536,11 @@ function renderSensors() {
 
           <div>
             <span>Last reading</span>
-            <strong>${new Date().toLocaleTimeString()}</strong>
+            <strong>
+              ${new Date().toLocaleTimeString("en-IN", {
+                timeZone: "Asia/Kolkata"
+              })}
+            </strong>
           </div>
         </div>
       </article>
@@ -399,34 +571,57 @@ function showView(viewName) {
     );
   });
 
-  document.getElementById("pageTitle").textContent =
-    pageTitles[viewName];
+  const title =
+    document.getElementById("pageTitle");
+
+  if (title && pageTitles[viewName]) {
+    title.textContent =
+      pageTitles[viewName];
+  }
 }
 
 function showToast(message) {
-  const toast = document.getElementById("toast");
+  const toast =
+    document.getElementById("toast");
+
+  if (!toast) {
+    return;
+  }
+
   toast.textContent = message;
   toast.classList.add("show");
 
   setTimeout(() => {
     toast.classList.remove("show");
-  }, 3000);
+  }, 3500);
 }
 
-async function insertOrThrow(table, rows, options = {}) {
-  const result = await supabaseClient
-    .from(table)
-    .insert(rows, options);
+async function insertRows(tableName, rows) {
+  const result =
+    await supabaseClient
+      .from(tableName)
+      .insert(rows);
 
   if (result.error) {
-    throw new Error(`${table}: ${result.error.message}`);
+    throw new Error(
+      `${tableName}: ${result.error.message}`
+    );
   }
 
   return result.data;
 }
 
 async function optimizeAndSave() {
-  const button = document.getElementById("optimizeSaveBtn");
+  const button =
+    document.getElementById("optimizeSaveBtn");
+
+  if (!supabaseConfigured) {
+    showToast(
+      "Please add your Supabase URL and publishable key in script.js."
+    );
+
+    return;
+  }
 
   button.disabled = true;
   button.textContent = "Saving...";
@@ -437,87 +632,135 @@ async function optimizeAndSave() {
       updateRoomStatus(room);
     });
 
-    const now = new Date().toISOString();
-    const metrics = getMetrics();
+    const currentTime =
+      new Date().toISOString();
 
-    const classroomRows = state.rooms.map(room => ({
-      room_code: room.id,
-      room_name: room.name,
-      capacity: room.capacity,
-      mode: room.mode,
-      ac_status: room.status,
-      updated_at: now
-    }));
+    const metrics =
+      getMetrics();
 
-    const sensorRows = state.rooms.map(room => ({
-      room_code: room.id,
-      occupancy: room.occupancy,
-      temperature: Number(format(room.temperature, 2)),
-      motion_detected: room.motion,
-      thermal_status: "Online",
-      motion_status: "Online",
-      recorded_at: now
-    }));
-
-    const energyRows = state.rooms.map(room => {
-      const baseline = getBaseline();
-      const saved = Math.max(0, baseline - room.actualKwh);
-
-      return {
+    const classroomRows =
+      state.rooms.map(room => ({
         room_code: room.id,
-        used_kwh: Number(format(room.actualKwh, 3)),
-        baseline_kwh: Number(format(baseline, 3)),
-        saved_kwh: Number(format(saved, 3)),
-        tariff: CONFIG.electricityTariff,
-        cost_saved: Number(
-          format(saved * CONFIG.electricityTariff, 2)
-        ),
-        equivalent_homes: Number(
-          format(saved / CONFIG.referenceHomeMonthlyKwh, 4)
-        ),
-        recorded_at: now
-      };
-    });
+        room_name: "Classroom 1",
+        capacity: room.capacity,
+        mode: room.mode,
+        ac_status: room.status,
+        updated_at: currentTime
+      }));
 
-    const actionRows = state.rooms.map(room => ({
-      room_code: room.id,
-      action: room.status === "ON" ? "AC_ON" : "AC_OFF",
-      reason: room.occupancy > 0
-        ? "Occupied room and temperature monitored"
-        : "Room empty, unnecessary cooling reduced",
-      mode: "automatic",
-      created_at: now
-    }));
+    const sensorRows =
+      state.rooms.map(room => ({
+        room_code: room.id,
+        occupancy: room.occupancy,
+        temperature: Number(
+          format(room.temperature, 2)
+        ),
+        motion_detected: room.motion,
+        thermal_status: "Online",
+        motion_status: "Online",
+        recorded_at: currentTime
+      }));
 
-    const classroomResult = await supabaseClient
-      .from("classrooms")
-      .upsert(classroomRows, {
-        onConflict: "room_code"
+    const energyRows =
+      state.rooms.map(room => {
+        const baseline =
+          getBaselineForOneAC();
+
+        const saved =
+          Math.max(
+            0,
+            baseline - room.actualKwh
+          );
+
+        return {
+          room_code: room.id,
+          used_kwh: Number(
+            format(room.actualKwh, 3)
+          ),
+          baseline_kwh: Number(
+            format(baseline, 3)
+          ),
+          saved_kwh: Number(
+            format(saved, 3)
+          ),
+          tariff: CONFIG.electricityTariff,
+          cost_saved: Number(
+            format(
+              saved * CONFIG.electricityTariff,
+              2
+            )
+          ),
+          equivalent_homes: Number(
+            format(
+              saved /
+              CONFIG.referenceHomeMonthlyKwh,
+              4
+            )
+          ),
+          recorded_at: currentTime
+        };
       });
+
+    const actionRows =
+      state.rooms.map(room => ({
+        room_code: room.id,
+        action:
+          room.status === "ON"
+            ? "AC_ON"
+            : "AC_OFF",
+        reason:
+          room.occupancy > 0
+            ? "Occupied classroom with automatic cooling"
+            : "Classroom empty, unnecessary cooling reduced",
+        mode: "automatic",
+        created_at: currentTime
+      }));
+
+    const classroomResult =
+      await supabaseClient
+        .from("classrooms")
+        .upsert(classroomRows, {
+          onConflict: "room_code"
+        });
 
     if (classroomResult.error) {
       throw new Error(
-        `classrooms: ${classroomResult.error.message}`
+        `classrooms: ${
+          classroomResult.error.message
+        }`
       );
     }
 
-    await insertOrThrow("sensor_readings", sensorRows);
-    await insertOrThrow("energy_readings", energyRows);
-    await insertOrThrow("optimization_actions", actionRows);
+    await insertRows(
+      "sensor_readings",
+      sensorRows
+    );
 
-    state.activities.unshift({
-      text: "Optimization completed and all information saved to Supabase.",
-      time: new Date().toLocaleTimeString()
-    });
+    await insertRows(
+      "energy_readings",
+      energyRows
+    );
+
+    await insertRows(
+      "optimization_actions",
+      actionRows
+    );
+
+    addActivity(
+      "Optimization completed and all classroom information was saved to Supabase."
+    );
 
     renderAll();
 
     showToast(
-      `${format(metrics.saved)} kWh optimized and saved successfully`
+      `${format(metrics.saved)} kWh optimized and saved successfully.`
     );
   } catch (error) {
-    console.error(error);
-    showToast(`Save failed: ${error.message}`);
+    console.error("Save failed:", error);
+
+    showToast(
+      `Save failed: ${error.message}`
+    );
   } finally {
     button.disabled = false;
     button.textContent = "⚡ Optimize & Save";
@@ -525,38 +768,72 @@ async function optimizeAndSave() {
 }
 
 async function loadSavedActions() {
-  const result = await supabaseClient
-    .from("optimization_actions")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(8);
-
-  if (result.error) {
-    console.warn("History load failed:", result.error.message);
+  if (!supabaseConfigured) {
     return;
   }
 
-  state.activities = result.data.map(row => ({
-    text: `${row.room_code}: ${row.action} — ${row.reason}`,
-    time: new Date(row.created_at).toLocaleString()
-  }));
+  const result =
+    await supabaseClient
+      .from("optimization_actions")
+      .select("*")
+      .order("created_at", {
+        ascending: false
+      })
+      .limit(8);
+
+  if (result.error) {
+    console.warn(
+      "Could not load saved actions:",
+      result.error.message
+    );
+
+    return;
+  }
+
+  state.activities =
+    result.data.map(row => ({
+      text:
+        `${row.room_code}: ${row.action} — ${row.reason}`,
+      time:
+        new Date(row.created_at).toLocaleString(
+          "en-IN",
+          {
+            timeZone: "Asia/Kolkata",
+            dateStyle: "medium",
+            timeStyle: "short"
+          }
+        )
+    }));
 
   renderReports();
 }
 
 function exportCSV() {
-  const metrics = getMetrics();
+  const metrics =
+    getMetrics();
 
   const rows = [
-    ["SmartClass Energy Report"],
+    ["SmartClass Energy Optimization Report"],
+    ["Generated", new Date().toLocaleString("en-IN")],
+    [],
+    ["Metric", "Value"],
     ["Electricity Used", `${format(metrics.actual)} kWh`],
     ["Energy Optimized", `${format(metrics.saved)} kWh`],
-    ["Cost Saved", `₹${format(metrics.moneySaved)}`],
-    ["Equivalent Homes", format(metrics.homes)],
+    ["Optimization", `${format(metrics.percentage, 1)}%`],
+    ["Estimated Cost Saved", `₹${format(metrics.moneySaved)}`],
+    ["Equivalent Homes", format(metrics.equivalentHomes)],
     [],
-    ["Room", "Occupancy", "Temperature", "AC Status", "Used kWh"],
+    [
+      "AC",
+      "Classroom",
+      "Occupancy",
+      "Temperature",
+      "AC Status",
+      "Used kWh"
+    ],
     ...state.rooms.map(room => [
       room.id,
+      room.name,
       room.occupancy,
       `${format(room.temperature, 1)}°C`,
       room.status,
@@ -564,59 +841,93 @@ function exportCSV() {
     ])
   ];
 
-  const csv = rows
-    .map(row => row.map(value => `"${value}"`).join(","))
-    .join("\n");
+  const csv =
+    rows.map(row =>
+      row.map(value =>
+        `"${String(value).replaceAll('"', '""')}"`
+      ).join(",")
+    ).join("\n");
 
-  const blob = new Blob([csv], {
-    type: "text/csv;charset=utf-8"
-  });
+  const blob =
+    new Blob([csv], {
+      type: "text/csv;charset=utf-8"
+    });
 
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = "smartclass-energy-report.csv";
+  const link =
+    document.createElement("a");
+
+  link.href =
+    URL.createObjectURL(blob);
+
+  link.download =
+    "smartclass-energy-report.csv";
+
   link.click();
 
-  showToast("CSV report downloaded");
+  URL.revokeObjectURL(link.href);
+
+  showToast("Energy report downloaded.");
 }
 
 document.addEventListener("click", event => {
-  const navButton = event.target.closest("[data-view]");
-  const linkButton = event.target.closest("[data-view-link]");
-  const controlButton = event.target.closest("[data-room][data-mode]");
+  const navButton =
+    event.target.closest("[data-view]");
+
+  const viewLink =
+    event.target.closest("[data-view-link]");
+
+  const controlButton =
+    event.target.closest(
+      "[data-room][data-mode]"
+    );
 
   if (navButton) {
     showView(navButton.dataset.view);
   }
 
-  if (linkButton) {
-    showView(linkButton.dataset.viewLink);
+  if (viewLink) {
+    showView(viewLink.dataset.viewLink);
   }
 
   if (controlButton) {
-    const room = state.rooms.find(
-      item => item.id === controlButton.dataset.room
+    const room =
+      state.rooms.find(item =>
+        item.id === controlButton.dataset.room
+      );
+
+    if (!room) {
+      return;
+    }
+
+    room.mode =
+      controlButton.dataset.mode;
+
+    updateRoomStatus(room);
+    renderAll();
+
+    addActivity(
+      `${room.id} mode changed to ${room.mode}.`
     );
 
-    if (room) {
-      room.mode = controlButton.dataset.mode;
-      updateRoomStatus(room);
-      renderAll();
-      showToast(`${room.id} mode updated`);
-    }
+    showToast(
+      `${room.id} mode updated.`
+    );
   }
 });
 
 document
   .getElementById("optimizeSaveBtn")
-  .addEventListener("click", optimizeAndSave);
+  .addEventListener(
+    "click",
+    optimizeAndSave
+  );
 
 document
   .getElementById("refreshBtn")
   .addEventListener("click", () => {
     simulateSensorData();
     renderAll();
-    showToast("Sensor data refreshed");
+    showToast("Sensor data refreshed.");
   });
 
 document
@@ -624,7 +935,7 @@ document
   .addEventListener("click", () => {
     simulateSensorData();
     renderAll();
-    showToast("Sensors refreshed");
+    showToast("Sensors refreshed.");
   });
 
 document
@@ -635,19 +946,29 @@ document
       updateRoomStatus(room);
     });
 
+    addActivity(
+      "Automatic mode enabled for all four AC units."
+    );
+
     renderAll();
-    showToast("Automatic mode enabled for all rooms");
+
+    showToast(
+      "Automatic mode enabled for all ACs."
+    );
   });
 
 document
   .getElementById("exportBtn")
-  .addEventListener("click", exportCSV);
+  .addEventListener(
+    "click",
+    exportCSV
+  );
 
 renderAll();
+
+loadSavedActions();
 
 setInterval(() => {
   simulateSensorData();
   renderAll();
 }, CONFIG.refreshMs);
-
-loadSavedActions();
